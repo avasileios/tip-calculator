@@ -125,7 +125,3 @@ This project is licensed under the **MIT License**.
 <div align="center">
 <sub>Created with ❤ by <a href="https://www.google.com/search?q=https://alfanitaf.duckdns.org">Vasileios Antonopoulos</a></sub>
 </div>
-
-```
-
-```
