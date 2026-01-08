@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tip Distribution / Διανομή Tips</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫙</text></svg>">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- FANCY LANGUAGE BUTTON --- */
+        .lang-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 28px;
+            z-index: 10000;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .lang-btn:hover {
+            background: white;
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .lang-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* --- LAYOUT --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            margin-top: 60px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* --- FANCY FOOTER --- */
+        .app-footer {
+            margin-top: 40px;
+            padding: 25px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            max-width: 600px;
+            align-self: center;
+            width: 100%;
+        }
+
+        .creator-text {
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            font-weight: 300;
+        }
+
+        .creator-name {
+            font-weight: 700;
+            background: linear-gradient(45deg, #ffd700, #ffffff, #ffd700);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        .heart-beat {
+            display: inline-block;
+            color: #ff4b4b;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.3); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.3); }
+            70% { transform: scale(1); }
+        }
+
+        .home-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 24px;
+            background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .home-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 210, 255, 0.6);
+        }
+
+        .home-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+            transition: transform 0.3s ease;
+        }
+
+        .home-btn:hover svg {
+            transform: scale(1.2);
+        }
+
+        /* --- STANDARD STYLES --- */
+        h1 { color: #333; margin-bottom: 30px; font-size: 28px; }
+        h2 { color: #555; margin-bottom: 20px; font-size: 20px; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .lang-btn { top: 15px; right: 15px; width: 45px; height: 45px; }
+            .container { margin-top: 50px; }
+            .app-footer { width: 95%; padding: 20px; }
+        }
+
+        .server-row { display: flex; gap: 10px; margin-bottom: 10px; }
+
+        input[type="text"], input[type="number"], input[type="date"] {
+            padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        input[type="text"] { flex: 1; }
+        input[type="number"].weight { width: 80px; }
+        input[type="file"] { display: none; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+
+        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+        .preview { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .preview h3 { margin-bottom: 10px; color: #1976d2; }
+        .preview-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+
+        button.btn-action {
+            padding: 12px 24px; border: none; border-radius: 6px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; width: 100%; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-success:hover { background: #45a049; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #f57c00; }
+        .btn-info { background: #2196f3; color: white; }
+        .btn-info:hover { background: #0b7dda; }
+
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .entry {
+            border: 2px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 15px;
+            position: relative; background: white; transition: all 0.3s;
+        }
+        .entry:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-right: 50px; }
+        .entry-date { font-weight: bold; font-size: 18px; color: #333; }
+        .entry-total { font-weight: bold; color: #667eea; font-size: 18px; }
+        .entry-delete { position: absolute; top: 15px; right: 15px; }
+
+        .distribution-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .distribution-item { background: #f5f5f5; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; font-size: 14px; }
+        .distribution-amount { font-weight: bold; color: #667eea; }
+
+        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: 500; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        /* Utility button styles for small edit/delete buttons */
+        .btn-edit { background: #ff9800; color: white; padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-size: 16px; }
+        .btn-danger { background: #f44336; color: white; padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <button class="lang-btn" onclick="toggleLanguage()" id="langBtn" title="Change Language">🇬🇧</button>
+
+    <div class="container">
+        <div class="card">
+            <h1 id="t-title">💰 Waiter Tip Distribution</h1>
+
+            <div class="button-group" style="margin-bottom: 20px;">
+                <button class="btn-action btn-warning" onclick="saveToFile()" id="t-save">💾 Save to File</button>
+                <button class="btn-action btn-info" onclick="document.getElementById('fileInput').click()" id="t-load">📂 Load from File</button>
+                <input type="file" id="fileInput" accept=".json" onchange="loadFromFile(event)">
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="grid">
+                <div>
+                    <h2 id="t-waitersHeader">Waiters & Weight Factors</h2>
+                    <div id="serversList"></div>
+                </div>
+
+                <div>
+                    <h2 id="t-dailyHeader">Daily Entry</h2>
+
+                    <div class="form-group">
+                        <label id="t-dateLabel">Date</label>
+                        <input type="date" id="entryDate" style="width: 100%;">
+                    </div>
+
+                    <div class="form-group">
+                        <label id="t-tipsLabel">Total Tips (€)</label>
+                        <input type="number" id="totalTips" placeholder="0.00" step="0.01" min="0" style="width: 100%;">
+                    </div>
+
+                    <div class="form-group">
+                        <label id="t-whoWorked">Who worked?</label>
+                        <div class="checkbox-grid" id="workingServers"></div>
+                    </div>
+
+                    <div id="preview"></div>
+
+                    <button class="btn-action btn-primary" onclick="addEntry()" id="t-addBtn">➕ Add Entry</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="historySection" style="display: none;">
+            <div class="header-flex">
+                <h2><span id="t-history">Entry History</span> (<span id="entryCount">0</span>)</h2>
+                <button class="btn-action btn-success" onclick="exportToExcel()" id="t-export">📥 Export to Excel</button>
+            </div>
+            <div id="entriesList"></div>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <div class="creator-text">
+            Created with <span class="heart-beat">❤</span> by <span class="creator-name">Vasileios Antonopoulos</span>
+        </div>
+        <a href="https://alfanitaf.duckdns.org/" target="_blank" class="home-btn">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2.1L1 12h3v9h6v-6h4v6h6v-9h3L12 2.1zm5 10h-3v-6H5v6H2v-9l10-9 10 9v9z"/> <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            alfanitaf.duckdns.org
+        </a>
+    </footer>
+
+    <script>
+        // --- LANGUAGE CONFIGURATION ---
+        const translations = {
+            en: {
+                title: "💰 Waiter Tip Distribution",
+                save: "💾 Save to File",
+                load: "📂 Load from File",
+                waitersHeader: "Waiters & Weight Factors",
+                dailyHeader: "Daily Entry",
+                dateLabel: "Date",
+                tipsLabel: "Total Tips (€)",
+                whoWorked: "Who worked?",
+                addBtn: "➕ Add Entry",
+                updateBtn: "💾 Update Entry",
+                history: "Entry History",
+                export: "📥 Export to Excel",
+                previewTitle: "Distribution Preview:",
+                total: "Total",
+                alertSaved: "✅ File saved successfully! Keep it safe.",
+                alertLoaded: "✅ Data loaded successfully!",
+                alertInvalid: "❌ Invalid file format!",
+                alertError: "❌ Error reading file!",
+                alertFill: "Please fill out all fields and select at least one waiter!",
+                alertAdded: "✅ Entry added!",
+                alertUpdated: "✅ Entry updated!",
+                alertDeleted: "✅ Entry deleted!",
+                alertEditMode: "✏️ Edit Mode - Change details and click 'Update Entry'",
+                confirmDelete: "Do you want to delete this entry?",
+                confirmReplace: "Data already exists. Do you want to replace it?",
+                xlSheet1: "Waiters",
+                xlSheet2: "Daily Tips",
+                xlSheet3: "Summary",
+                xlName: "Waiter Name",
+                xlWeight: "Weight Factor",
+                xlDate: "Date",
+                xlTotal: "Total Tips",
+                xlAmount: "Amount Received",
+                xlTotalEarnings: "Total Earnings"
+            },
+            el: {
+                title: "💰 Διανομή Tips Σερβιτόρων",
+                save: "💾 Αποθήκευση Αρχείου",
+                load: "📂 Φόρτωση Αρχείου",
+                waitersHeader: "Σερβιτόροι & Συντελεστές",
+                dailyHeader: "Καταχώρηση Ημέρας",
+                dateLabel: "Ημερομηνία",
+                tipsLabel: "Συνολικά Tips (€)",
+                whoWorked: "Ποιοι δούλεψαν;",
+                addBtn: "➕ Προσθήκη",
+                updateBtn: "💾 Ενημέρωση",
+                history: "Ιστορικό",
+                export: "📥 Εξαγωγή Excel",
+                previewTitle: "Προεπισκόπηση:",
+                total: "Σύνολο",
+                alertSaved: "✅ Το αρχείο αποθηκεύτηκε! Κράτησέ το ασφαλές.",
+                alertLoaded: "✅ Τα δεδομένα φορτώθηκαν επιτυχώς!",
+                alertInvalid: "❌ Μη έγκυρο αρχείο!",
+                alertError: "❌ Σφάλμα ανάγνωσης αρχείου!",
+                alertFill: "Παρακαλώ συμπλήρωσε όλα τα πεδία και επίλεξε προσωπικό!",
+                alertAdded: "✅ Η καταχώρηση προστέθηκε!",
+                alertUpdated: "✅ Η καταχώρηση ενημερώθηκε!",
+                alertDeleted: "✅ Η καταχώρηση διαγράφηκε!",
+                alertEditMode: "✏️ Λειτουργία Επεξεργασίας - Άλλαξε τα στοιχεία και πάτα 'Ενημέρωση'",
+                confirmDelete: "Θέλεις σίγουρα να διαγράψεις την καταχώρηση;",
+                confirmReplace: "Υπάρχουν ήδη δεδομένα. Θέλεις να τα αντικαταστήσεις;",
+                xlSheet1: "Σερβιτόροι",
+                xlSheet2: "Ημερήσια Tips",
+                xlSheet3: "Σύνολα",
+                xlName: "Όνομα Σερβιτόρου",
+                xlWeight: "Συντελεστής",
+                xlDate: "Ημερομηνία",
+                xlTotal: "Σύνολο Tips",
+                xlAmount: "Ποσό που έλαβε",
+                xlTotalEarnings: "Συνολικά Έσοδα"
+            }
+        };
+
+        let currentLang = localStorage.getItem('appLang') || 'en';
+
+        // --- CORE DATA ---
+        let servers = [
+            { id: 1, name: 'Waiter 1', weight: 1.0 },
+            { id: 2, name: 'Waiter 2', weight: 1.0 },
+            { id: 3, name: 'Waiter 3', weight: 1.0 },
+            { id: 4, name: 'Waiter 4', weight: 1.0 },
+            { id: 5, name: 'Waiter 5', weight: 1.0 },
+            { id: 6, name: 'Waiter 6', weight: 1.0 },
+            { id: 7, name: 'Waiter 7', weight: 1.0 },
+            { id: 8, name: 'Waiter 8', weight: 1.0 },
+            { id: 9, name: 'Waiter 9', weight: 1.0 },
+            { id: 10, name: 'Waiter 10', weight: 1.0 }
+        ];
+
+        let dailyEntries = [];
+        let editingEntryId = null;
+
+        // --- LANGUAGE FUNCTIONS ---
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'el' : 'en';
+            localStorage.setItem('appLang', currentLang);
+            updateUILanguage();
+        }
+
+        function t(key) {
+            return translations[currentLang][key];
+        }
+
+        function updateUILanguage() {
+            // Update button icon (shows the flag of the CURRENT language)
+            document.getElementById('langBtn').textContent = currentLang === 'en' ? '🇬🇧' : '🇬🇷';
+
+            // Update static elements
+            document.getElementById('t-title').textContent = t('title');
+            document.getElementById('t-save').textContent = t('save');
+            document.getElementById('t-load').textContent = t('load');
+            document.getElementById('t-waitersHeader').textContent = t('waitersHeader');
+            document.getElementById('t-dailyHeader').textContent = t('dailyHeader');
+            document.getElementById('t-dateLabel').textContent = t('dateLabel');
+            document.getElementById('t-tipsLabel').textContent = t('tipsLabel');
+            document.getElementById('t-whoWorked').textContent = t('whoWorked');
+            document.getElementById('t-history').textContent = t('history');
+            document.getElementById('t-export').textContent = t('export');
+
+            const btnPrimary = document.getElementById('t-addBtn');
+            if (editingEntryId !== null) {
+                btnPrimary.textContent = t('updateBtn');
+            } else {
+                btnPrimary.textContent = t('addBtn');
+            }
+
+            renderEntries();
+            updatePreview();
+        }
+
+        // --- APP LOGIC (UNCHANGED) ---
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => { alertContainer.innerHTML = ''; }, 3000);
+        }
+
+        function saveToFile() {
+            const data = { servers: servers, entries: dailyEntries, savedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tips-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showAlert(t('alertSaved'), 'success');
+        }
+
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.servers && data.entries) {
+                        if (dailyEntries.length > 0 && !confirm(t('confirmReplace'))) return;
+                        servers = data.servers;
+                        dailyEntries = data.entries;
+                        saveData();
+                        renderServers();
+                        renderEntries();
+                        showAlert(t('alertLoaded'), 'success');
+                    } else { showAlert(t('alertInvalid'), 'info'); }
+                } catch (error) { showAlert(t('alertError'), 'info'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function saveData() {
+            try { localStorage.setItem('tipsData', JSON.stringify({ servers, entries: dailyEntries })); } catch(e) {}
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('tipsData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    servers = data.servers || servers;
+                    dailyEntries = data.entries || [];
+                }
+            } catch(e) {}
+        }
+
+        function renderServers() {
+            document.getElementById('serversList').innerHTML = servers.map(s => `
+                <div class="server-row">
+                    <input type="text" value="${s.name}" onchange="updateServerName(${s.id}, this.value)">
+                    <input type="number" class="weight" value="${s.weight}" step="0.1" min="0" onchange="updateServerWeight(${s.id}, this.value)">
+                </div>`).join('');
+            document.getElementById('workingServers').innerHTML = servers.map(s => `
+                <label class="checkbox-label">
+                    <input type="checkbox" id="server_${s.id}" onchange="updatePreview()">
+                    <span>${s.name}</span>
+                </label>`).join('');
+        }
+
+        function updateServerName(id, name) {
+            servers = servers.map(s => s.id === id ? {...s, name} : s);
+            saveData();
+            renderServers();
+        }
+
+        function updateServerWeight(id, weight) {
+            servers = servers.map(s => s.id === id ? {...s, weight: parseFloat(weight) || 0} : s);
+            saveData();
+            updatePreview();
+        }
+
+        function getWorkingServerIds() {
+            return servers.filter(s => document.getElementById(`server_${s.id}`).checked).map(s => s.id);
+        }
+
+        function calculateDistribution(totalTips, workingServerIds) {
+            const workingServers = servers.filter(s => workingServerIds.includes(s.id));
+            const totalWeight = workingServers.reduce((sum, s) => sum + s.weight, 0);
+            return workingServers.map(server => ({
+                ...server,
+                share: totalWeight > 0 ? (totalTips * server.weight / totalWeight) : 0
+            }));
+        }
+
+        function updatePreview() {
+            const totalTips = parseFloat(document.getElementById('totalTips').value) || 0;
+            const workingServerIds = getWorkingServerIds();
+            if (totalTips > 0 && workingServerIds.length > 0) {
+                const distribution = calculateDistribution(totalTips, workingServerIds);
+                document.getElementById('preview').innerHTML = `
+                    <div class="preview"><h3>${t('previewTitle')}</h3>${distribution.map(d => `
+                        <div class="preview-item"><span>${d.name}</span><span style="font-weight: bold;">${d.share.toFixed(2)}€</span></div>
+                    `).join('')}</div>`;
+            } else { document.getElementById('preview').innerHTML = ''; }
+        }
+
+        function addEntry() {
+            const date = document.getElementById('entryDate').value;
+            const totalTips = parseFloat(document.getElementById('totalTips').value);
+            const workingServerIds = getWorkingServerIds();
+            if (!date || !totalTips || workingServerIds.length === 0) { alert(t('alertFill')); return; }
+            const distribution = calculateDistribution(totalTips, workingServerIds);
+
+            if (editingEntryId !== null) {
+                const index = dailyEntries.findIndex(e => e.id === editingEntryId);
+                if (index !== -1) {
+                    dailyEntries[index] = { id: editingEntryId, date, totalTips, distribution };
+                    showAlert(t('alertUpdated'), 'success');
+                    editingEntryId = null;
+                }
+            } else {
+                dailyEntries.push({ id: Date.now() + Math.random(), date, totalTips, distribution });
+                showAlert(t('alertAdded'), 'success');
+            }
+            saveData();
+            document.getElementById('totalTips').value = '';
+            servers.forEach(s => document.getElementById(`server_${s.id}`).checked = false);
+            document.getElementById('preview').innerHTML = '';
+            renderEntries();
+            updateUILanguage(); // Reset button text
+        }
+
+        function editEntry(entryId) {
+            const entry = dailyEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            editingEntryId = entryId;
+            document.getElementById('entryDate').value = entry.date;
+            document.getElementById('totalTips').value = entry.totalTips;
+            servers.forEach(s => {
+                const checkbox = document.getElementById(`server_${s.id}`);
+                if (checkbox) checkbox.checked = entry.distribution.some(d => d.id === s.id);
+            });
+            updatePreview();
+            document.getElementById('t-addBtn').textContent = t('updateBtn');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showAlert(t('alertEditMode'), 'info');
+        }
+
+        function deleteEntry(entryId) {
+            if (confirm(t('confirmDelete'))) {
+                dailyEntries = dailyEntries.filter(e => e.id !== entryId);
+                saveData();
+                renderEntries();
+                showAlert(t('alertDeleted'), 'success');
+            }
+        }
+
+        function renderEntries() {
+            const historySection = document.getElementById('historySection');
+            if (dailyEntries.length === 0) { historySection.style.display = 'none'; return; }
+            historySection.style.display = 'block';
+            document.getElementById('entryCount').textContent = dailyEntries.length;
+            document.getElementById('entriesList').innerHTML = dailyEntries.map(entry => `
+                <div class="entry">
+                    <div style="position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-edit" onclick="editEntry(${entry.id})" title="Edit">✏️</button>
+                        <button class="btn-danger" onclick="deleteEntry(${entry.id})" title="Delete">✕</button>
+                    </div>
+                    <div class="entry-header" style="padding-right: 80px;">
+                        <div class="entry-date">${entry.date}</div>
+                        <div class="entry-total">${t('total')}: ${entry.totalTips.toFixed(2)}€</div>
+                    </div>
+                    <div class="distribution-grid">
+                        ${entry.distribution.map(d => `<div class="distribution-item"><span>${d.name}</span><span class="distribution-amount">${d.share.toFixed(2)}€</span></div>`).join('')}
+                    </div>
+                </div>`).join('');
+        }
+
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') { showAlert('❌ Error: Excel library not loaded.', 'info'); return; }
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws1 = XLSX.utils.aoa_to_sheet([[t('xlName'), t('xlWeight')], ...servers.map(s => [s.name, s.weight])]);
+                XLSX.utils.book_append_sheet(wb, ws1, t('xlSheet1'));
+
+                const dailyData = [[t('xlDate'), t('xlTotal'), t('xlName'), t('xlWeight'), t('xlAmount')]];
+                dailyEntries.forEach(entry => {
+                    entry.distribution.forEach((dist, idx) => {
+                        dailyData.push([idx === 0 ? entry.date : '', idx === 0 ? entry.totalTips : '', dist.name, dist.weight, dist.share.toFixed(2)]);
+                    });
+                    dailyData.push(['', '', '', '', '']);
+                });
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dailyData), t('xlSheet2'));
+
+                const serverTotals = {};
+                servers.forEach(s => serverTotals[s.id] = 0);
+                dailyEntries.forEach(e => e.distribution.forEach(d => serverTotals[d.id] = (serverTotals[d.id] || 0) + d.share));
+                const ws3 = XLSX.utils.aoa_to_sheet([[t('xlName'), t('xlTotalEarnings')], ...servers.map(s => [s.name, (serverTotals[s.id] || 0).toFixed(2)])]);
+                XLSX.utils.book_append_sheet(wb, ws3, t('xlSheet3'));
+
+                XLSX.writeFile(wb, `Tips_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showAlert(t('alertSaved'), 'success');
+            } catch (error) { showAlert(t('alertError') + ' ' + error.message, 'info'); }
+        }
+
+        document.getElementById('totalTips').addEventListener('input', updatePreview);
+        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+        loadData();
+        renderServers();
+        updateUILanguage();
+    </script>
+</body>
+</html>
